@@ -4,7 +4,7 @@ import { ticketCryptoService } from './ticketCryptoService.js';
 import { qrService } from './qrService.js';
 
 // Memory store for tickets to ensure idempotency and persistence during this demo
-const generatedTickets = [];
+export const generatedTickets = [];
 
 export const ticketService = {
   /**
@@ -55,6 +55,16 @@ export const ticketService = {
 
       const secureToken = ticketCryptoService.createSecureToken(payload);
       const qrDataUri = await qrService.generateQRDataURI(secureToken);
+
+      // Initialize status in Redis to support atomic check-ins
+      try {
+        const { default: redisClient } = await import('../config/redis.js');
+        if (redisClient.isReady) {
+          await redisClient.setNX(`ticket_status:${ticketId}`, 'ISSUED');
+        }
+      } catch (err) {
+        console.warn("Could not set Redis status", err);
+      }
 
       const ticketRecord = {
         ticketId,

@@ -1,5 +1,28 @@
 import { ticketService } from '../services/ticketService.js';
+import { ticketValidationService } from '../services/ticketValidationService.js';
 import { demoUser } from '../data/store.js';
+
+export const validateTicket = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const result = await ticketValidationService.validateTicket(token);
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Validation error:", err);
+    return res.status(500).json({ valid: false, status: 'ERROR', message: 'Internal server error during validation.' });
+  }
+};
+
+export const checkInTicket = async (req, res) => {
+  try {
+    const { token } = req.body;
+    const result = await ticketValidationService.checkInTicket(token);
+    return res.status(200).json(result);
+  } catch (err) {
+    console.error("Check-in error:", err);
+    return res.status(500).json({ valid: false, status: 'ERROR', message: 'Internal server error during check-in.' });
+  }
+};
 
 export const getTickets = async (req, res) => {
   const { bookingId } = req.params;
