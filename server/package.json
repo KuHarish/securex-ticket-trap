@@ -1,0 +1,15 @@
+{
+  "name": "ticket-trap-server",
+  "version": "1.0.0",
+  "description": "Ticket Trap API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}
