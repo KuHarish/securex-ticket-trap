@@ -80,3 +80,17 @@ export const bookTickets = async (bookingData: {
     throw error;
   }
 };
+
+export const getDigitalTickets = async (bookingId: string) => {
+  try {
+    const response = await fetch(`${API_BASE}/tickets/${bookingId}`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to retrieve tickets');
+    }
+    return data.tickets; // returns Array of tickets
+  } catch (error) {
+    console.error('Error fetching tickets:', error);
+    throw error;
+  }
+};
