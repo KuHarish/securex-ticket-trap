@@ -1,8 +1,9 @@
 import express from 'express';
-import { getUserStatus } from '../controllers/userController.js';
+import { getUserStatus, getUserTickets } from '../controllers/userController.js';
 
 const router = express.Router();
 
 router.get('/me', getUserStatus);
+router.get('/me/tickets', getUserTickets);
 
 export default router;

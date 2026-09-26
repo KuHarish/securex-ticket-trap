@@ -50,6 +50,9 @@ export const abuseDetectionService = {
   async recordSuspiciousActivity(identity, points = 1) {
     if (!redisClient.isReady) return;
     
+    this.incrementStat('suspiciousRequests');
+    this.logSecurityEvent('Suspicious Request', `Identity ${identity} accumulated ${points} abuse points.`);
+
     const abuseKey = `abuse_score:${identity}`;
     const blockKey = `blocked:${identity}`;
     
@@ -61,6 +64,8 @@ export const abuseDetectionService = {
 
     if (score >= config.ABUSE_THRESHOLD) {
       console.log(`[SECURITY] Identity ${identity} temporarily throttled. Score: ${score}`);
+      this.incrementStat('activeThrottles');
+      this.logSecurityEvent('Temporary Throttle Activated', `Identity ${identity} blocked for exceeding abuse threshold.`);
       await redisClient.set(blockKey, '1', { EX: config.ABUSE_BLOCK_SECONDS });
     }
   },
@@ -90,7 +95,12 @@ export const abuseDetectionService = {
       arguments: [config.DUPLICATE_REQUEST_WINDOW_SECONDS.toString()]
     });
 
-    return result === -1; // -1 means duplicate detected
+    if (result === -1) {
+      this.incrementStat('duplicateRequests');
+      this.logSecurityEvent('Duplicate Request', `Identical booking request detected from ${identity}.`);
+      return true;
+    }
+    return false;
   },
 
   /**
@@ -105,11 +115,51 @@ export const abuseDetectionService = {
     });
 
     if (result === -1) {
-      // Need to find TTL to tell client when to retry
+      this.logSecurityEvent('Rate Limit Triggered', `Identity blocked from endpoint for ${windowSeconds}s`);
+      this.incrementStat('rateLimitedRequests');
       const ttl = await redisClient.ttl(key);
       return { allowed: false, retryAfter: ttl > 0 ? ttl : windowSeconds };
     }
 
     return { allowed: true, remaining: limit - result };
+  },
+
+  // --- DEMO DASHBOARD METHODS ---
+  _stats: {
+    bookingRequests: 0,
+    rateLimitedRequests: 0,
+    duplicateRequests: 0,
+    suspiciousRequests: 0,
+    activeThrottles: 0,
+    successfulBookings: 0,
+    failedBookings: 0,
+    ticketsIssued: 0,
+    ticketsValidated: 0,
+    ticketsRejected: 0
+  },
+  _events: [],
+
+  incrementStat(statKey) {
+    if (this._stats[statKey] !== undefined) {
+      this._stats[statKey]++;
+    }
+  },
+
+  logSecurityEvent(title, description) {
+    this._events.unshift({
+      id: Math.random().toString(36).substring(7),
+      timestamp: new Date().toISOString(),
+      title,
+      description
+    });
+    // Keep only last 20
+    if (this._events.length > 20) this._events.pop();
+  },
+
+  getStats() {
+    return {
+      stats: this._stats,
+      events: this._events
+    };
   }
 };

@@ -79,6 +79,9 @@ export const ticketService = {
 
       newTickets.push(ticketRecord);
       generatedTickets.push(ticketRecord);
+      
+      const { abuseDetectionService } = await import('./abuseDetectionService.js');
+      abuseDetectionService.incrementStat('ticketsIssued');
     }
 
     return newTickets;

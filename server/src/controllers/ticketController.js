@@ -1,11 +1,21 @@
 import { ticketService } from '../services/ticketService.js';
 import { ticketValidationService } from '../services/ticketValidationService.js';
 import { demoUser } from '../data/store.js';
+import { abuseDetectionService } from '../services/abuseDetectionService.js';
 
 export const validateTicket = async (req, res) => {
   try {
     const { token } = req.body;
     const result = await ticketValidationService.validateTicket(token);
+    
+    if (result.valid) {
+      abuseDetectionService.incrementStat('ticketsValidated');
+      abuseDetectionService.logSecurityEvent('Ticket Validated', `Ticket ${result.ticket.ticketId} successfully validated.`);
+    } else {
+      abuseDetectionService.incrementStat('ticketsRejected');
+      abuseDetectionService.logSecurityEvent('Ticket Rejected', `Reason: ${result.status}`);
+    }
+
     return res.status(200).json(result);
   } catch (err) {
     console.error("Validation error:", err);
@@ -17,6 +27,14 @@ export const checkInTicket = async (req, res) => {
   try {
     const { token } = req.body;
     const result = await ticketValidationService.checkInTicket(token);
+    
+    if (result.valid && result.status === 'USED') {
+      abuseDetectionService.logSecurityEvent('Ticket Checked In', `Ticket ${result.ticket.ticketId} marked as USED.`);
+    } else if (!result.valid) {
+      abuseDetectionService.incrementStat('ticketsRejected');
+      abuseDetectionService.logSecurityEvent('Check-in Rejected', `Reason: ${result.status}`);
+    }
+
     return res.status(200).json(result);
   } catch (err) {
     console.error("Check-in error:", err);

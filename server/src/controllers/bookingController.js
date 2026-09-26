@@ -55,10 +55,13 @@ export const createBooking = async (req, res) => {
   const reservationId = req.body.reservationId || `RES-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
   try {
+    abuseDetectionService.incrementStat('bookingRequests');
+
     // Atomically Reserve Inventory
     const reservationSuccess = await inventoryService.reserveTickets(eventId, ticketIds, reservationId);
     
     if (!reservationSuccess) {
+      abuseDetectionService.incrementStat('failedBookings');
       return res.status(409).json({
         success: false,
         error: 'TICKET_UNAVAILABLE',
@@ -67,7 +70,7 @@ export const createBooking = async (req, res) => {
     }
 
     try {
-      // Process Booking (Simulate delay to show lock is active, but we can just process it)
+      // Process Booking
       const ticketPrice = 500;
       const totalAmount = requestedQuantity * ticketPrice; 
 
@@ -85,6 +88,9 @@ export const createBooking = async (req, res) => {
       // Recalculate summary after successful booking
       const newSummary = getPurchaseSummary(userId, eventId);
 
+      abuseDetectionService.incrementStat('successfulBookings');
+      abuseDetectionService.logSecurityEvent('Booking Successful', `Booking ID ${booking.bookingId} confirmed for ${requestedQuantity} seats.`);
+
       return res.status(200).json({
         success: true,
         booking,
@@ -94,10 +100,12 @@ export const createBooking = async (req, res) => {
     } catch (bookingError) {
       // Rollback on unexpected error during booking creation
       await inventoryService.releaseTickets(eventId, ticketIds);
+      abuseDetectionService.incrementStat('failedBookings');
       throw bookingError;
     }
   } catch (error) {
     console.error("Booking error:", error);
+    abuseDetectionService.incrementStat('failedBookings');
     return res.status(500).json({
       success: false,
       error: 'BOOKING_FAILED',

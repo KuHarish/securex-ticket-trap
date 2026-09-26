@@ -117,3 +117,27 @@ export const getDigitalTickets = async (bookingId: string) => {
     throw error;
   }
 };
+
+export const getUserTickets = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/users/me/tickets`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch user tickets');
+    }
+    return data.tickets || [];
+  } catch (error) {
+    console.error("Error fetching user tickets", error);
+    return [];
+  }
+};
+export const getMonitorStats = async () => {
+  try {
+    const response = await fetch(`${API_BASE}/monitor/stats`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching monitor stats", error);
+    return { stats: {}, events: [] };
+  }
+};

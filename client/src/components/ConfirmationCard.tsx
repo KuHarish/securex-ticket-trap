@@ -74,9 +74,22 @@ export function ConfirmationCard({ bookingId, event, selectedSeats }: Props) {
                   <h3 className="text-xl font-bold text-white">{event.name}</h3>
                   <p className="text-primary text-sm">{event.date} • {event.time}</p>
                 </div>
-                <span className="bg-success/20 text-success text-xs px-2 py-1 rounded font-bold uppercase tracking-wider">
-                  {ticket.status}
-                </span>
+                <div className="flex flex-col items-end space-y-2">
+                  <span className="bg-success/20 text-success text-xs px-2 py-1 rounded font-bold uppercase tracking-wider">
+                    {ticket.status}
+                  </span>
+                  {ticket.token && (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(ticket.token);
+                        alert('Token copied to clipboard!');
+                      }}
+                      className="text-xs bg-secondary/50 hover:bg-secondary text-text-muted hover:text-white px-2 py-1 rounded transition-colors"
+                    >
+                      Copy Validation Token
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4 mt-auto">
