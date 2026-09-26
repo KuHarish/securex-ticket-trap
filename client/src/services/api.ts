@@ -1,11 +1,30 @@
+const API_BASE = 'http://localhost:3001/api';
+
+export const getUserStatus = async (eventId: string) => {
+  try {
+    const response = await fetch(`${API_BASE}/users/me?eventId=${eventId}`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch user status');
+    }
+    return data; // { success, user, purchaseSummary }
+  } catch (error: any) {
+    console.warn("Backend not running or error fetching user status.", error);
+    // Fallback for development if backend is not started
+    return {
+      success: true,
+      user: { userId: 'USER-FALLBACK', name: 'Fallback User', email: 'fallback@example.com' },
+      purchaseSummary: { purchased: 0, limit: 2, remaining: 2 }
+    };
+  }
+};
+
 export const bookTickets = async (bookingData: {
   eventId: string;
-  seats: string[];
-  quantity: number;
-  totalAmount: number;
+  ticketIds: string[];
 }) => {
   try {
-    const response = await fetch('http://localhost:3001/api/bookings', {
+    const response = await fetch(`${API_BASE}/bookings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -21,23 +40,29 @@ export const bookTickets = async (bookingData: {
 
     return data;
   } catch (error: any) {
-    // Fallback for when the backend is not running yet during early Module 1 testing
-    console.warn("Backend not running. Using simulated fallback response.");
-    
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (!bookingData.eventId || !bookingData.seats || bookingData.seats.length === 0) {
-          reject(new Error('Invalid booking request. Please select valid seats.'));
-          return;
-        }
-        
-        const bookingId = `BK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        resolve({
-          success: true,
-          bookingId,
-          message: 'Booking confirmed (Fallback API)',
-        });
-      }, 1000);
-    });
+    // If backend is truly down and we need fallback logic
+    if (error.message.includes('Failed to fetch') || error.message.includes('fetch failed')) {
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          if (!bookingData.eventId || !bookingData.ticketIds || bookingData.ticketIds.length === 0) {
+            reject(new Error('Invalid booking request. Please select valid seats.'));
+            return;
+          }
+          const bookingId = `BK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+          resolve({
+            success: true,
+            booking: {
+              bookingId,
+              status: 'CONFIRMED'
+            },
+            purchaseSummary: { purchased: bookingData.ticketIds.length, limit: 2, remaining: 2 - bookingData.ticketIds.length },
+            message: 'Booking confirmed (Fallback API)',
+          });
+        }, 1000);
+      });
+    }
+
+    // Normal backend rejection
+    throw error;
   }
 };

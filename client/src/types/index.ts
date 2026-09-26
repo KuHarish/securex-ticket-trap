@@ -16,5 +16,17 @@ export interface EventDetails {
   location: string;
   description: string;
   ticketPrice: number;
-  purchaseLimit: number;
+  purchaseLimit: number; // Initially mock limit, but now we'll rely on the server's PurchaseSummary
+}
+
+export interface User {
+  userId: string;
+  name: string;
+  email: string;
+}
+
+export interface PurchaseSummary {
+  purchased: number;
+  limit: number;
+  remaining: number;
 }

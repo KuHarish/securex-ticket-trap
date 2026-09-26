@@ -1,12 +1,15 @@
 import React from 'react';
-import { EventDetails as EventDetailsType } from '../types';
+import { EventDetails as EventDetailsType, PurchaseSummary } from '../types';
 import { Calendar, Clock, MapPin, Tag, Info } from 'lucide-react';
 
 interface Props {
   event: EventDetailsType;
+  purchaseSummary?: PurchaseSummary | null;
 }
 
-export function EventDetails({ event }: Props) {
+export function EventDetails({ event, purchaseSummary }: Props) {
+  const limit = purchaseSummary?.limit || event.purchaseLimit;
+
   return (
     <div className="bg-surface rounded-lg p-6 border border-secondary">
       <div className="flex justify-between items-start mb-4">
@@ -44,7 +47,7 @@ export function EventDetails({ event }: Props) {
 
       <div className="mt-6 pt-4 border-t border-secondary flex items-center space-x-2 text-sm text-text-muted">
         <Info size={16} />
-        <span>Purchase limit: Maximum {event.purchaseLimit} tickets per user</span>
+        <span>Purchase limit: Maximum {limit} tickets per user</span>
       </div>
     </div>
   );
