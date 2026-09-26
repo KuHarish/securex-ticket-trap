@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Seat } from '../types';
 
 export function useLiveSeats(eventId: string, fallbackFetch: () => Promise<void>) {
   const [liveStatus, setLiveStatus] = useState<'connecting' | 'live' | 'disconnected'>('connecting');
