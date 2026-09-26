@@ -23,8 +23,9 @@ for i = 1, numTickets do
   end
   
   -- Check if ticket is temporarily locked by another reservation
-  if redis.call('EXISTS', lockKey) == 1 then
-    return 0 -- Failed: ticket is locked
+  local currentLock = redis.call('GET', lockKey)
+  if currentLock and currentLock ~= resId then
+    return 0 -- Failed: ticket is locked by someone else
   end
 end
 

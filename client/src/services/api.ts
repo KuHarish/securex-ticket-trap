@@ -1,4 +1,5 @@
-const API_BASE = 'http://localhost:3001/api';
+// Using 127.0.0.1 instead of localhost avoids IPv6 ::1 resolution issues on Windows
+const API_BASE = 'http://127.0.0.1:3001/api';
 
 export const getUserStatus = async (eventId: string) => {
   try {

@@ -29,10 +29,10 @@ export default function EventPage() {
     const liveSeats = await getSeats(mockEvent.id);
     if (liveSeats) {
       setSeats(liveSeats);
-      // Remove any selected seats that are now sold/reserved
+      // Remove any selected seats that are now sold
       setSelectedSeats(prev => prev.filter(id => {
          const seat = liveSeats.find((s: Seat) => s.id === id);
-         return seat && seat.status === 'AVAILABLE';
+         return seat && seat.status !== 'SOLD';
       }));
     }
   }, []);
@@ -44,13 +44,17 @@ export default function EventPage() {
       const data = e.detail;
       if (data.type === 'SEAT_STATE') {
         setSeats(data.seats);
+        // We only clear if they are sold or if we are not the one holding the reservation.
+        // For simplicity in the demo, we will only remove them if they are SOLD, not RESERVED.
+        // Or we just check if it's not AVAILABLE and we are not currently holding it, but we can't easily know here.
+        // Let's just remove them if they become SOLD.
         setSelectedSeats(prev => prev.filter(id => {
           const seat = data.seats.find((s: Seat) => s.id === id);
-          return seat && seat.status === 'AVAILABLE';
+          return seat && seat.status !== 'SOLD'; // If it's SOLD, we must remove it.
         }));
       } else if (data.type === 'SEAT_UPDATED') {
         setSeats(prev => prev.map(s => s.id === data.seatId ? { ...s, status: data.status } : s));
-        if (data.status !== 'AVAILABLE') {
+        if (data.status === 'SOLD') {
           setSelectedSeats(prev => prev.filter(id => id !== data.seatId));
         }
       }

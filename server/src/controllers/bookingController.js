@@ -9,11 +9,13 @@ export const createBooking = async (req, res) => {
 
   // Basic validation
   if (!eventId || typeof eventId !== 'string') {
+    console.log("400 INVALID_EVENT: ", eventId);
     await abuseDetectionService.recordSuspiciousActivity(req.ip || 'anonymous', 1);
     return res.status(400).json({ success: false, error: 'INVALID_EVENT', message: 'Invalid event ID.' });
   }
 
   if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0) {
+    console.log("400 INVALID_TICKETS: ", ticketIds);
     await abuseDetectionService.recordSuspiciousActivity(req.ip || 'anonymous', 1);
     return res.status(400).json({ success: false, error: 'INVALID_TICKETS', message: 'Invalid or missing tickets.' });
   }
@@ -21,6 +23,7 @@ export const createBooking = async (req, res) => {
   // Ensure no duplicate tickets in a single request
   const uniqueTickets = [...new Set(ticketIds)];
   if (uniqueTickets.length !== ticketIds.length) {
+    console.log("400 DUPLICATE_TICKETS: ", ticketIds);
     return res.status(400).json({ success: false, error: 'DUPLICATE_TICKETS', message: 'Duplicate tickets in request.' });
   }
 
