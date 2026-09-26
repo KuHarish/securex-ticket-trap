@@ -8,7 +8,7 @@ import ticketRoutes from './routes/ticketRoutes.js';
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
 
 // Routes
 app.use('/api/bookings', bookingRoutes);

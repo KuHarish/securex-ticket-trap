@@ -2,16 +2,19 @@ import { demoUser } from '../data/store.js';
 import { getPurchaseSummary, createBookingRecord } from '../services/bookingService.js';
 import { config } from '../config/config.js';
 import { inventoryService } from '../services/inventoryService.js';
+import { abuseDetectionService } from '../services/abuseDetectionService.js';
 
 export const createBooking = async (req, res) => {
   const { eventId, ticketIds } = req.body;
 
   // Basic validation
   if (!eventId || typeof eventId !== 'string') {
+    await abuseDetectionService.recordSuspiciousActivity(req.ip || 'anonymous', 1);
     return res.status(400).json({ success: false, error: 'INVALID_EVENT', message: 'Invalid event ID.' });
   }
 
   if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0) {
+    await abuseDetectionService.recordSuspiciousActivity(req.ip || 'anonymous', 1);
     return res.status(400).json({ success: false, error: 'INVALID_TICKETS', message: 'Invalid or missing tickets.' });
   }
 
@@ -35,6 +38,8 @@ export const createBooking = async (req, res) => {
   const existingPurchasedQuantity = summary.purchased;
 
   if (existingPurchasedQuantity + requestedQuantity > config.MAX_TICKETS_PER_USER) {
+    // Record suspicious activity for repeatedly trying to bypass purchase limit
+    await abuseDetectionService.recordSuspiciousActivity(userId || req.ip || 'anonymous', 1);
     return res.status(409).json({
       success: false,
       error: 'PURCHASE_LIMIT_EXCEEDED',
