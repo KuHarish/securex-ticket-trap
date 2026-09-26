@@ -1,5 +1,5 @@
-// Using 127.0.0.1 instead of localhost avoids IPv6 ::1 resolution issues on Windows
-const API_BASE = 'http://127.0.0.1:3001/api';
+// Use environment variable for production, fallback to local for development
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001/api';
 
 export const getUserStatus = async (eventId: string) => {
   try {

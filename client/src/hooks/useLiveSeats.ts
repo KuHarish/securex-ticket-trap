@@ -12,8 +12,9 @@ export function useLiveSeats(eventId: string, fallbackFetch: () => Promise<void>
     }
 
     setLiveStatus('connecting');
-    // Using 127.0.0.1 instead of localhost avoids IPv6 ::1 resolution issues on some Windows machines
-    const ws = new WebSocket('ws://127.0.0.1:3001');
+    // Use environment variable for production, fallback to local for development
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:3001';
+    const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
