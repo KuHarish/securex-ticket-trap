@@ -12,6 +12,10 @@ export function SeatLegend() {
         <span className="text-sm text-white font-medium">Selected</span>
       </div>
       <div className="flex items-center space-x-2">
+        <div className="w-6 h-6 rounded-t-md rounded-b-sm bg-orange-900/50 border border-orange-800"></div>
+        <span className="text-sm text-text-muted">Reserved</span>
+      </div>
+      <div className="flex items-center space-x-2">
         <div className="w-6 h-6 rounded-t-md rounded-b-sm bg-secondary"></div>
         <span className="text-sm text-text-muted">Sold</span>
       </div>

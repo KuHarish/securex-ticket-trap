@@ -1,4 +1,4 @@
-export type SeatStatus = 'available' | 'sold';
+export type SeatStatus = 'AVAILABLE' | 'SOLD' | 'RESERVED';
 
 export interface Seat {
   id: string;

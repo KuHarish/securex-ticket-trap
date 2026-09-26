@@ -33,9 +33,32 @@ export const getSeats = async (eventId: string) => {
   }
 };
 
+export const reserveTickets = async (eventId: string, ticketIds: string[]) => {
+  const response = await fetch(`${API_BASE}/inventory/${eventId}/reserve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticketIds }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to reserve tickets');
+  return data;
+};
+
+export const releaseTickets = async (eventId: string, ticketIds: string[]) => {
+  const response = await fetch(`${API_BASE}/inventory/${eventId}/release`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ticketIds }),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Failed to release tickets');
+  return data;
+};
+
 export const bookTickets = async (bookingData: {
   eventId: string;
   ticketIds: string[];
+  reservationId?: string;
 }) => {
   try {
     const response = await fetch(`${API_BASE}/bookings`, {

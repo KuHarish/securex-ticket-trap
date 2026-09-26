@@ -16,6 +16,13 @@ export const connectRedis = async () => {
   try {
     await redisClient.connect();
     console.log('Connected to Redis at', redisUrl);
+    
+    // Enable keyspace notifications for expired events ('Ex')
+    try {
+      await redisClient.configSet('notify-keyspace-events', 'Ex');
+    } catch (e) {
+      console.warn('Could not set notify-keyspace-events. Ensure Redis has permissions.');
+    }
   } catch (error) {
     console.error('Failed to connect to Redis:', error);
   }

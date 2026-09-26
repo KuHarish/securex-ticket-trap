@@ -1,7 +1,7 @@
 import { EventDetails, Seat } from '../types';
 
 export const mockEvent: EventDetails = {
-  id: 'EVT-7729',
+  id: 'EVT-001',
   name: 'Secure X Tech Fest',
   category: 'Technology Conference',
   date: '26 September 2026',
@@ -25,7 +25,7 @@ export const mockSeats: Seat[] = rows.flatMap((row) =>
     return {
       id,
       label: id,
-      status: isSold ? 'sold' : 'available',
+      status: isSold ? 'SOLD' : 'AVAILABLE',
     };
   })
 );

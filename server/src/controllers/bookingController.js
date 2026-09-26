@@ -51,8 +51,8 @@ export const createBooking = async (req, res) => {
     });
   }
 
-  // Generate a reservation ID
-  const reservationId = `RES-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  // Generate a reservation ID or use provided
+  const reservationId = req.body.reservationId || `RES-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
   try {
     // Atomically Reserve Inventory

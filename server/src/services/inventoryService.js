@@ -37,15 +37,35 @@ end
 return 1 -- Success
 `;
 
+import { wsService } from './wsService.js';
+
 export const inventoryService = {
+  async getLiveSeats(eventId) {
+    if (!redisClient.isReady) return [];
+    const allSeats = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4', 'C1', 'C2', 'C3', 'C4'];
+    const multi = redisClient.multi();
+    allSeats.forEach(seatId => multi.get(`ticket:${eventId}:${seatId}`));
+    allSeats.forEach(seatId => multi.exists(`lock:${eventId}:${seatId}`));
+    const results = await multi.exec();
+    
+    const ticketResults = results.slice(0, allSeats.length);
+    const lockResults = results.slice(allSeats.length);
+
+    return allSeats.map((id, index) => {
+      const isSold = ticketResults[index] === 'SOLD';
+      const isLocked = !!lockResults[index];
+      let status = 'AVAILABLE';
+      if (isSold) status = 'SOLD';
+      else if (isLocked) status = 'RESERVED';
+      return { id, label: id, status };
+    });
+  },
+
   /**
    * Safe idempotent initialization of tickets into Redis.
-   * Only sets "AVAILABLE" if the key doesn't already exist.
    */
   async initializeEvent(eventId, allSeatIds) {
     if (!redisClient.isReady) return;
-    
-    // We use a pipeline/multi to initialize all at once efficiently
     const multi = redisClient.multi();
     for (const seatId of allSeatIds) {
       multi.setNX(`ticket:${eventId}:${seatId}`, 'AVAILABLE');
@@ -64,13 +84,16 @@ export const inventoryService = {
     const ticketKeys = ticketIds.map(id => `ticket:${eventId}:${id}`);
     const keys = [...lockKeys, ...ticketKeys];
 
-    // execute Lua script
     const result = await redisClient.eval(reserveScript, {
       keys,
       arguments: [reservationId, RESERVATION_TTL.toString()]
     });
 
-    return result === 1; // 1 = success, 0 = fail
+    const success = result === 1;
+    if (success) {
+      ticketIds.forEach(id => wsService.broadcastSeatUpdate(eventId, id, 'RESERVED'));
+    }
+    return success;
   },
 
   /**
@@ -85,6 +108,7 @@ export const inventoryService = {
       multi.del(`lock:${eventId}:${seatId}`);
     }
     await multi.exec();
+    ticketIds.forEach(id => wsService.broadcastSeatUpdate(eventId, id, 'SOLD'));
   },
 
   /**
@@ -98,5 +122,6 @@ export const inventoryService = {
       multi.del(`lock:${eventId}:${seatId}`);
     }
     await multi.exec();
+    ticketIds.forEach(id => wsService.broadcastSeatUpdate(eventId, id, 'AVAILABLE'));
   }
 };

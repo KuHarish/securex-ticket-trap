@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { mockEvent, mockSeats as initialMockSeats } from '../data/mockData';
 import { EventDetails } from '../components/EventDetails';
 import { SeatMap } from '../components/SeatMap';
 import { BookingSummary } from '../components/BookingSummary';
 import { BookingReview } from '../components/BookingReview';
 import { ConfirmationCard } from '../components/ConfirmationCard';
-import { bookTickets, getUserStatus, getSeats } from '../services/api';
+import { bookTickets, getUserStatus, getSeats, reserveTickets, releaseTickets } from '../services/api';
 import { User, PurchaseSummary, Seat } from '../types';
+
+import { useLiveSeats } from '../hooks/useLiveSeats';
 
 type Step = 'select' | 'review' | 'confirmation';
 
@@ -17,22 +19,45 @@ export default function EventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bookingConfirmation, setBookingConfirmation] = useState<any>(null);
+  const [currentReservationId, setCurrentReservationId] = useState<string | null>(null);
   
   const [user, setUser] = useState<User | null>(null);
   const [purchaseSummary, setPurchaseSummary] = useState<PurchaseSummary | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
 
-  const fetchLiveSeats = async () => {
+  const fetchLiveSeats = useCallback(async () => {
     const liveSeats = await getSeats(mockEvent.id);
     if (liveSeats) {
       setSeats(liveSeats);
-      // Remove any selected seats that are now sold
+      // Remove any selected seats that are now sold/reserved
       setSelectedSeats(prev => prev.filter(id => {
          const seat = liveSeats.find((s: Seat) => s.id === id);
-         return seat && seat.status === 'available';
+         return seat && seat.status === 'AVAILABLE';
       }));
     }
-  };
+  }, []);
+
+  const { liveStatus } = useLiveSeats(mockEvent.id, fetchLiveSeats);
+
+  useEffect(() => {
+    const handleLiveSeatUpdate = (e: any) => {
+      const data = e.detail;
+      if (data.type === 'SEAT_STATE') {
+        setSeats(data.seats);
+        setSelectedSeats(prev => prev.filter(id => {
+          const seat = data.seats.find((s: Seat) => s.id === id);
+          return seat && seat.status === 'AVAILABLE';
+        }));
+      } else if (data.type === 'SEAT_UPDATED') {
+        setSeats(prev => prev.map(s => s.id === data.seatId ? { ...s, status: data.status } : s));
+        if (data.status !== 'AVAILABLE') {
+          setSelectedSeats(prev => prev.filter(id => id !== data.seatId));
+        }
+      }
+    };
+    window.addEventListener('live-seat-update', handleLiveSeatUpdate);
+    return () => window.removeEventListener('live-seat-update', handleLiveSeatUpdate);
+  }, []);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -47,7 +72,7 @@ export default function EventPage() {
       }
     };
     fetchStatus();
-    fetchLiveSeats(); // Initial seat fetch
+    // fetchLiveSeats(); // Commented out since WS will fetch initial state, but fallback to hook handles it
   }, []);
 
   const handleSeatToggle = (seatId: string) => {
@@ -73,13 +98,37 @@ export default function EventPage() {
     });
   };
 
-  const handleContinueToReview = () => {
+  const handleContinueToReview = async () => {
     if (selectedSeats.length === 0) {
       setError('Please select at least one seat.');
       return;
     }
-    setStep('review');
+    
+    setIsSubmitting(true);
     setError(null);
+    try {
+      const res = await reserveTickets(mockEvent.id, selectedSeats);
+      setCurrentReservationId(res.reservationId);
+      setStep('review');
+    } catch (err: any) {
+      setError(err.message || 'Selected seats are no longer available. Please choose others.');
+      await fetchLiveSeats();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelReview = async () => {
+    setStep('select');
+    setError(null);
+    if (currentReservationId) {
+      try {
+        await releaseTickets(mockEvent.id, selectedSeats);
+        setCurrentReservationId(null);
+      } catch (e) {
+        console.error("Failed to release tickets", e);
+      }
+    }
   };
 
   const handleConfirmBooking = async () => {
@@ -89,6 +138,7 @@ export default function EventPage() {
       const response: any = await bookTickets({
         eventId: mockEvent.id,
         ticketIds: selectedSeats,
+        ...(currentReservationId ? { reservationId: currentReservationId } : {})
       });
       
       setBookingConfirmation(response);
@@ -123,12 +173,20 @@ export default function EventPage() {
             <h1 className="text-3xl font-bold tracking-tight">Ticket Trap</h1>
             <p className="text-text-muted mt-1">Secure booking. Fair allocation.</p>
           </div>
-          {user && (
-            <div className="text-right text-sm">
-              <span className="text-text-muted">Signed in as </span>
-              <span className="font-semibold text-white">{user.name}</span>
+          <div className="flex items-center space-x-6 text-sm">
+            <div className="flex items-center space-x-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${liveStatus === 'live' ? 'bg-green-500 animate-pulse' : liveStatus === 'connecting' ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
+              <span className="text-text-muted">
+                {liveStatus === 'live' ? 'Live updates connected' : liveStatus === 'connecting' ? 'Connecting...' : 'Live updates disconnected'}
+              </span>
             </div>
-          )}
+            {user && (
+              <div className="text-right">
+                <span className="text-text-muted">Signed in as </span>
+                <span className="font-semibold text-white">{user.name}</span>
+              </div>
+            )}
+          </div>
         </header>
 
         {error && (
@@ -168,7 +226,7 @@ export default function EventPage() {
           <BookingReview 
             event={mockEvent}
             selectedSeats={selectedSeats}
-            onEdit={() => setStep('select')}
+            onEdit={handleCancelReview}
             onConfirm={handleConfirmBooking}
             isSubmitting={isSubmitting}
           />
