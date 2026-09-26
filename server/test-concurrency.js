@@ -1,4 +1,4 @@
-import fetch from 'node-fetch'; // or use native fetch if node 18+
+// Using native Node fetch (v18+)
 
 const API_URL = 'http://localhost:3001/api/bookings';
 
