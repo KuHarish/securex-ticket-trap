@@ -1,26 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { mockEvent, mockSeats } from '../data/mockData';
+import { mockEvent, mockSeats as initialMockSeats } from '../data/mockData';
 import { EventDetails } from '../components/EventDetails';
 import { SeatMap } from '../components/SeatMap';
 import { BookingSummary } from '../components/BookingSummary';
 import { BookingReview } from '../components/BookingReview';
 import { ConfirmationCard } from '../components/ConfirmationCard';
-import { bookTickets, getUserStatus } from '../services/api';
-import { User, PurchaseSummary } from '../types';
+import { bookTickets, getUserStatus, getSeats } from '../services/api';
+import { User, PurchaseSummary, Seat } from '../types';
 
 type Step = 'select' | 'review' | 'confirmation';
 
 export default function EventPage() {
   const [step, setStep] = useState<Step>('select');
+  const [seats, setSeats] = useState<Seat[]>(initialMockSeats);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bookingConfirmation, setBookingConfirmation] = useState<any>(null);
   
-  // Module 2 additions
   const [user, setUser] = useState<User | null>(null);
   const [purchaseSummary, setPurchaseSummary] = useState<PurchaseSummary | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+
+  const fetchLiveSeats = async () => {
+    const liveSeats = await getSeats(mockEvent.id);
+    if (liveSeats) {
+      setSeats(liveSeats);
+      // Remove any selected seats that are now sold
+      setSelectedSeats(prev => prev.filter(id => {
+         const seat = liveSeats.find((s: Seat) => s.id === id);
+         return seat && seat.status === 'available';
+      }));
+    }
+  };
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -35,6 +47,7 @@ export default function EventPage() {
       }
     };
     fetchStatus();
+    fetchLiveSeats(); // Initial seat fetch
   }, []);
 
   const handleSeatToggle = (seatId: string) => {
@@ -46,7 +59,6 @@ export default function EventPage() {
         return prev.filter((id) => id !== seatId);
       }
       
-      // Frontend Pre-Validation Check
       if (purchaseSummary.purchased >= purchaseSummary.limit) {
         setError(`You have reached your maximum ticket limit of ${purchaseSummary.limit}.`);
         return prev;
@@ -82,10 +94,11 @@ export default function EventPage() {
       setBookingConfirmation(response);
       setPurchaseSummary(response.purchaseSummary);
       setStep('confirmation');
+      await fetchLiveSeats(); // Refresh seats after successful booking
     } catch (err: any) {
       setError(err.message || 'An error occurred during booking. Please try again.');
-      // If error occurs, we go back to select so they can adjust
       setStep('select');
+      await fetchLiveSeats(); // Refresh seats to show what became unavailable
     } finally {
       setIsSubmitting(false);
     }
@@ -129,9 +142,12 @@ export default function EventPage() {
             <div className="lg:col-span-2 space-y-8">
               <EventDetails event={mockEvent} purchaseSummary={purchaseSummary} />
               <div className="bg-surface rounded-lg p-6 border border-secondary">
-                <h3 className="text-xl font-semibold mb-6 border-b border-secondary pb-4">Select Tickets</h3>
+                <div className="flex justify-between items-center border-b border-secondary pb-4 mb-6">
+                  <h3 className="text-xl font-semibold">Select Tickets</h3>
+                  <button onClick={fetchLiveSeats} className="text-xs px-3 py-1 bg-secondary text-white rounded hover:bg-secondary/80">Refresh Status</button>
+                </div>
                 <SeatMap 
-                  seats={mockSeats} 
+                  seats={seats} 
                   selectedSeats={selectedSeats} 
                   onSeatToggle={handleSeatToggle} 
                 />

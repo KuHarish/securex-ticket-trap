@@ -19,6 +19,20 @@ export const getUserStatus = async (eventId: string) => {
   }
 };
 
+export const getSeats = async (eventId: string) => {
+  try {
+    const response = await fetch(`${API_BASE}/inventory/${eventId}/seats`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch seats');
+    }
+    return data.seats; // returns Array of Seat
+  } catch (error: any) {
+    console.warn("Failed to fetch live seats, using mock data.");
+    return null;
+  }
+};
+
 export const bookTickets = async (bookingData: {
   eventId: string;
   ticketIds: string[];
