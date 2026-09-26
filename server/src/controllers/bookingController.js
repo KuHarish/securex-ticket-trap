@@ -33,8 +33,8 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ success: false, error: 'INVALID_QUANTITY', message: 'Quantity must be positive.' });
   }
 
-  // Resolve user identity
-  const userId = demoUser.userId;
+  // Resolve user identity (use IP to separate users in demo mode)
+  const userId = req.ip || demoUser.userId;
 
   // Check purchase limit securely
   const summary = getPurchaseSummary(userId, eventId);

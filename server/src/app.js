@@ -8,6 +8,7 @@ import monitorRoutes from './routes/monitorRoutes.js';
 
 const app = express();
 
+app.set('trust proxy', 1); // Ensures req.ip works behind Render's load balancer
 app.use(cors());
 app.use(express.json({ limit: '100kb' }));
 

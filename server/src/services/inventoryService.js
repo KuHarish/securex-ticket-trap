@@ -69,10 +69,12 @@ export const inventoryService = {
     if (!redisClient.isReady) return;
     const multi = redisClient.multi();
     for (const seatId of allSeatIds) {
-      multi.setNX(`ticket:${eventId}:${seatId}`, 'AVAILABLE');
+      // For demo purposes, we forcefully reset tickets to AVAILABLE on server start
+      multi.set(`ticket:${eventId}:${seatId}`, 'AVAILABLE');
+      multi.del(`lock:${eventId}:${seatId}`);
     }
     await multi.exec();
-    console.log(`Initialized inventory for event ${eventId}`);
+    console.log(`Initialized and reset inventory for event ${eventId}`);
   },
 
   /**

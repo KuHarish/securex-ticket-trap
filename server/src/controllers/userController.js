@@ -4,17 +4,18 @@ import { ticketService } from '../services/ticketService.js';
 
 export const getUserStatus = (req, res) => {
   const { eventId } = req.query;
-  const summary = eventId ? getPurchaseSummary(demoUser.userId, eventId) : null;
+  const userId = req.ip || demoUser.userId;
+  const summary = eventId ? getPurchaseSummary(userId, eventId) : null;
 
   res.status(200).json({
     success: true,
-    user: demoUser,
+    user: { ...demoUser, userId: userId, name: `Demo User (${userId})` },
     purchaseSummary: summary
   });
 };
 
 export const getUserTickets = async (req, res) => {
-  const userId = demoUser.userId;
+  const userId = req.ip || demoUser.userId;
   const userBookings = bookings.filter(b => b.userId === userId);
   
   let allTickets = [];
